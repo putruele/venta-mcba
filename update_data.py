@@ -44,7 +44,7 @@ def git_push():
         subprocess.run(["git", "add", "."], cwd=script_dir, check=True)
         commit_msg = f"Actualizacion automatica de ventas - {datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"
         subprocess.run(["git", "commit", "-m", commit_msg], cwd=script_dir, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        result = subprocess.run(["git", "push", "origin", "main"], cwd=script_dir, capture_output=True, text=True)
+        result = subprocess.run(["git", "push", "origin", "main", "--force"], cwd=script_dir, capture_output=True, text=True)
         if result.returncode == 0:
             print("¡Cambios subidos a GitHub exitosamente!")
         else:
