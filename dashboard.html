@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard de Ventas - Mercado Central</title>
+  <link rel="stylesheet" href="dashboard.css">
+  <!-- CryptoJS para desencriptar datos -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <!-- Chart.js para los graficos -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <!-- Pantalla de Login Flotante -->
+  <div id="login-overlay" class="login-overlay">
+    <div class="login-box">
+      <h2>Acceso Protegido</h2>
+      <p>Ingrese sus credenciales de Comercial para ver el reporte de ventas.</p>
+      
+      <div class="login-form-group">
+        <label for="login-username">Usuario</label>
+        <input type="text" id="login-username" class="login-input" placeholder="Nombre de usuario" autocomplete="username">
+      </div>
+      
+      <div class="login-form-group">
+        <label for="login-password">Contraseña</label>
+        <input type="password" id="login-password" class="login-input" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      
+      <div id="login-error" class="login-error-message"></div>
+      
+      <button id="btn-login" class="btn-login-submit">Ingresar</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <header>
+      <div>
+        <h1>Reporte de Ventas <span>Mercado Central</span></h1>
+        <p style="color: var(--text-secondary); margin-top: 0.25rem;">Visualización, control y filtros detallados de planillas de ventas consolidada</p>
+      </div>
+      <div class="last-update-badge" id="last-update-badge">
+        Actualizado: Cargando...
+      </div>
+    </header>
+
+    <!-- KPIs Cards -->
+    <div class="kpi-grid">
+      <div class="kpi-card recaudado">
+        <div class="kpi-title">Recaudado Total</div>
+        <div class="kpi-value" id="kpi-recaudado">$0,00</div>
+        <div class="kpi-sub" id="kpi-sub-recaudado">Suma neta de ventas</div>
+      </div>
+      <div class="kpi-card bultos">
+        <div class="kpi-title">Bultos Totales</div>
+        <div class="kpi-value" id="kpi-bultos">0</div>
+        <div class="kpi-sub" id="kpi-sub-bultos">Cantidad de bultos/cajas vendidos</div>
+      </div>
+      <div class="kpi-card promedio">
+        <div class="kpi-title">Promedio General</div>
+        <div class="kpi-value" id="kpi-promedio">$0,00</div>
+        <div class="kpi-sub" id="kpi-sub-promedio">Valor promedio ponderado por bulto</div>
+      </div>
+    </div>
+
+    <!-- Main Dashboard Section -->
+    <div class="dashboard-body">
+      
+      <!-- Left Column: Filters -->
+      <aside class="filters-panel">
+        <div class="panel-title">
+          <span>Filtros</span>
+          <svg style="width:18px;height:18px;fill:var(--text-secondary)" viewBox="0 0 24 24"><path d="M14,12V19.88C14.04,20.18 13.94,20.5 13.71,20.71C13.32,21.1 12.69,21.1 12.3,20.71L10.29,18.7C10.06,18.47 9.96,18.16 10,17.87V12H9.97L4.21,4.62C3.82,4.11 3.93,3.38 4.44,3C4.62,2.87 4.83,2.8 5.05,2.8H18.95C19.61,2.8 20.15,3.34 20.15,4C20.15,4.22 20.08,4.43 19.95,4.61L14.03,12H14Z"/></svg>
+        </div>
+
+        <div class="filter-group">
+          <label>Rango de Fechas</label>
+          <div class="date-range-inputs">
+            <input type="date" id="filter-date-from" class="filter-control" placeholder="Desde">
+            <input type="date" id="filter-date-to" class="filter-control" placeholder="Hasta">
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <label for="filter-product-input">Producto</label>
+          <div class="select-wrapper">
+            <input type="text" id="filter-product-input" class="filter-control" placeholder="Todos los productos..." autocomplete="off">
+            <div id="filter-product-dropdown" class="search-select-dropdown"></div>
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <label for="filter-provider-input">Proveedor</label>
+          <div class="select-wrapper">
+            <input type="text" id="filter-provider-input" class="filter-control" placeholder="Todos los proveedores..." autocomplete="off">
+            <div id="filter-provider-dropdown" class="search-select-dropdown"></div>
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <label for="filter-guia">Número de Guía</label>
+          <input type="text" id="filter-guia" class="filter-control" placeholder="Ej: 160577">
+        </div>
+
+        <div class="filter-group">
+          <label for="filter-lote">Número de Lote</label>
+          <input type="text" id="filter-lote" class="filter-control" placeholder="Ej: 1">
+        </div>
+
+        <button id="btn-clear-filters" class="btn-reset">Restablecer Filtros</button>
+      </aside>
+
+      <!-- Right Column: Graphs and Details Table -->
+      <main style="display: flex; flex-direction: column; gap: 2rem;">
+        
+        <!-- Graphs Grid -->
+        <div class="charts-grid">
+          <div class="chart-card">
+            <div class="chart-title">Top Productos por Recaudación</div>
+            <div class="chart-container">
+              <canvas id="chart-products"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Participación de Proveedores (Top 10)</div>
+            <div class="chart-container">
+              <canvas id="chart-providers"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Table Panel -->
+        <div class="table-panel">
+          <div class="table-header-row">
+            <div class="table-title">Detalle de Ventas</div>
+            <div class="table-actions">
+              <div class="search-input-wrapper">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" id="global-search" placeholder="Buscar en la tabla...">
+              </div>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table id="sales-table">
+              <thead>
+                <tr>
+                  <th data-column="fecha">Fecha <span class="sort-indicator">▼</span></th>
+                  <th data-column="producto">Producto <span class="sort-indicator"></span></th>
+                  <th data-column="variedad">Variedad <span class="sort-indicator"></span></th>
+                  <th data-column="proveedor">Proveedor <span class="sort-indicator"></span></th>
+                  <th data-column="guia" class="col-number">Guía <span class="sort-indicator"></span></th>
+                  <th data-column="lote" class="col-number">Lote <span class="sort-indicator"></span></th>
+                  <th data-column="bultos" class="col-number">Bultos <span class="sort-indicator"></span></th>
+                  <th data-column="promedio" class="col-number">Prom. Unitario <span class="sort-indicator"></span></th>
+                  <th data-column="recaudado" class="col-number">Recaudado <span class="sort-indicator"></span></th>
+                  <th data-column="envase">Envase <span class="sort-indicator"></span></th>
+                  <th data-column="procedencia">Procedencia <span class="sort-indicator"></span></th>
+                  <th data-column="origen_archivo">Origen Archivo <span class="sort-indicator"></span></th>
+                </tr>
+              </thead>
+              <tbody id="table-body">
+                <!-- Se inyecta dinamicamente -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination row -->
+          <div class="pagination">
+            <div id="pagination-info">Mostrando 0-0 de 0 registros</div>
+            <div class="pagination-controls">
+              <button class="pagination-btn" id="btn-page-first" disabled>&lt;&lt;</button>
+              <button class="pagination-btn" id="btn-page-prev" disabled>&lt;</button>
+              <span id="pagination-pages" style="display:flex; gap:0.25rem;"></span>
+              <button class="pagination-btn" id="btn-page-next" disabled>&gt;</button>
+              <button class="pagination-btn" id="btn-page-last" disabled>&gt;&gt;</button>
+            </div>
+            <div class="page-size-selector">
+              Filas por página:
+              <select id="page-size-select">
+                <option value="10">10</option>
+                <option value="25" selected>25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+            </div>
+          </div>
+
+        </div>
+      </main>
+
+    </div>
+  </div>
+
+  <!-- Carga la base de datos generada -->
+  <script src="dashboard_data.js"></script>
+
+  <!-- Script principal del Dashboard -->
+  <script>
+    // Inicialización del Dashboard
+    document.addEventListener("DOMContentLoaded", () => {
+      // 1. Verificar si hay datos encriptados
+      if (!window.encryptedData) {
+        document.getElementById("login-overlay").style.display = "none";
+        document.querySelector(".container").style.display = "none";
+        document.body.innerHTML = `
+          <div class="container" style="text-align: center; padding-top: 100px; display: block !important;">
+            <h1 style="margin-bottom: 20px; font-size: 2.5rem; background: linear-gradient(135deg, #f59e0b, #ef4444); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+              Base de Datos No Encontrada
+            </h1>
+            <p style="color: var(--text-secondary); max-width: 600px; margin: 0 auto 30px; font-size: 1.1rem;">
+              No se han encontrado datos encriptados. Por favor, asegúrese de ejecutar el archivo <strong>actualizar.bat</strong> para procesar la información de las planillas Excel.
+            </p>
+            <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); display: inline-block; padding: 1.5rem 2.5rem; border-radius: 12px; font-family: monospace; color: #60a5fa;">
+              Pasos:<br>
+              1. Coloque los archivos Excel en la carpeta del proyecto.<br>
+              2. Haga doble clic en <strong>actualizar.bat</strong>.<br>
+              3. Recargue esta página.
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      const loginOverlay = document.getElementById("login-overlay");
+      const btnLogin = document.getElementById("btn-login");
+      const usernameInput = document.getElementById("login-username");
+      const passwordInput = document.getElementById("login-password");
+      const loginError = document.getElementById("login-error");
+      const mainContainer = document.querySelector(".container");
+
+      // Ocultar el contenedor principal inicialmente por seguridad
+      mainContainer.style.setProperty("display", "none", "important");
+
+      // Intentar login automatico usando sessionStorage
+      const savedToken = sessionStorage.getItem("dashboard_session_token");
+      if (savedToken) {
+        const decrypted = tryDecrypt(savedToken);
+        if (decrypted) {
+          window.dashboardData = decrypted;
+          loginOverlay.style.display = "none";
+          mainContainer.style.setProperty("display", "block", "important");
+          initDashboard();
+          return;
+        }
+      }
+
+      // Listeners de Login
+      btnLogin.addEventListener("click", performLogin);
+      usernameInput.addEventListener("keypress", (e) => { if (e.key === "Enter") performLogin(); });
+      passwordInput.addEventListener("keypress", (e) => { if (e.key === "Enter") performLogin(); });
+
+      function performLogin() {
+        const username = usernameInput.value.trim();
+        const password = passwordInput.value;
+
+        if (username !== "Comercial") {
+          showLoginError("Usuario o contraseña incorrectos.");
+          return;
+        }
+
+        const decrypted = tryDecrypt(password);
+        if (decrypted) {
+          window.dashboardData = decrypted;
+          sessionStorage.setItem("dashboard_session_token", password);
+          
+          loginOverlay.classList.add("fade-out");
+          setTimeout(() => {
+            loginOverlay.style.display = "none";
+            mainContainer.style.setProperty("display", "block", "important");
+            initDashboard();
+          }, 300);
+        } else {
+          showLoginError("Usuario o contraseña incorrectos.");
+        }
+      }
+
+      function showLoginError(msg) {
+        loginError.textContent = msg;
+        loginError.style.display = "block";
+        const loginBox = document.querySelector(".login-box");
+        loginBox.classList.add("shake-animation");
+        setTimeout(() => { loginBox.classList.remove("shake-animation"); }, 500);
+      }
+
+      function tryDecrypt(password) {
+        try {
+          const ciphertextBytes = CryptoJS.enc.Base64.parse(window.encryptedData);
+          const iv = CryptoJS.lib.WordArray.create(ciphertextBytes.words.slice(0, 4));
+          const encrypted = CryptoJS.lib.WordArray.create(ciphertextBytes.words.slice(4));
+          const key = CryptoJS.SHA256(password);
+          
+          const decrypted = CryptoJS.AES.decrypt(
+            { ciphertext: encrypted },
+            key,
+            { iv: iv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7 }
+          );
+          
+          const decryptedText = decrypted.toString(CryptoJS.enc.Utf8);
+          if (!decryptedText) return null;
+          return JSON.parse(decryptedText);
+        } catch (e) {
+          console.error("Error al desencriptar:", e);
+          return null;
+        }
+      }
+
+      // Funcion que inicializa la visualizacion del dashboard una vez desencriptado
+      function initDashboard() {
+        // Actualizar badge de última actualización
+        document.getElementById("last-update-badge").textContent = `Actualizado: ${window.lastUpdate || "Recién"}`;
+
+      // Configuración de paginación y ordenamiento
+      let currentPage = 1;
+      let pageSize = 25;
+      let currentSortColumn = "fecha";
+      let currentSortDirection = "desc";
+      let filteredData = [...window.dashboardData];
+
+      // Instancias de graficos
+      let chartProducts = null;
+      let chartProviders = null;
+
+      // Cargar valores para filtros (extraer opciones unicas)
+      const productsList = [...new Set(window.dashboardData.map(d => d.producto).filter(Boolean))].sort();
+      const providersList = [...new Set(window.dashboardData.map(d => d.proveedor).filter(Boolean))].sort();
+
+      // Configurar inputs de rango de fechas con limites de los datos
+      const dates = window.dashboardData.map(d => d.fecha).filter(Boolean).sort();
+      if (dates.length > 0) {
+        document.getElementById("filter-date-from").min = dates[0];
+        document.getElementById("filter-date-from").max = dates[dates.length - 1];
+        document.getElementById("filter-date-to").min = dates[0];
+        document.getElementById("filter-date-to").max = dates[dates.length - 1];
+      }
+
+      // Inicializar selectores autocompletables personalizados
+      setupSearchableSelect("filter-product-input", "filter-product-dropdown", productsList, () => {
+        currentPage = 1;
+        applyFilters();
+      });
+
+      setupSearchableSelect("filter-provider-input", "filter-provider-dropdown", providersList, () => {
+        currentPage = 1;
+        applyFilters();
+      });
+
+      // Configurar listeners de otros inputs
+      document.getElementById("filter-date-from").addEventListener("change", () => { currentPage = 1; applyFilters(); });
+      document.getElementById("filter-date-to").addEventListener("change", () => { currentPage = 1; applyFilters(); });
+      document.getElementById("filter-guia").addEventListener("input", () => { currentPage = 1; applyFilters(); });
+      document.getElementById("filter-lote").addEventListener("input", () => { currentPage = 1; applyFilters(); });
+      document.getElementById("global-search").addEventListener("input", () => { currentPage = 1; applyFilters(); });
+
+      // Selector de tamaño de página
+      document.getElementById("page-size-select").addEventListener("change", (e) => {
+        pageSize = parseInt(e.target.value);
+        currentPage = 1;
+        renderTable();
+      });
+
+      // Botón restablecer
+      document.getElementById("btn-clear-filters").addEventListener("click", () => {
+        document.getElementById("filter-date-from").value = "";
+        document.getElementById("filter-date-to").value = "";
+        
+        const prodInput = document.getElementById("filter-product-input");
+        prodInput.value = "";
+        prodInput.dataset.value = "";
+        
+        const provInput = document.getElementById("filter-provider-input");
+        provInput.value = "";
+        provInput.dataset.value = "";
+        
+        document.getElementById("filter-guia").value = "";
+        document.getElementById("filter-lote").value = "";
+        document.getElementById("global-search").value = "";
+        
+        currentPage = 1;
+        applyFilters();
+      });
+
+      // Configurar ordenamiento en tabla
+      const tableHeaders = document.querySelectorAll("#sales-table th");
+      tableHeaders.forEach(th => {
+        th.addEventListener("click", () => {
+          const column = th.dataset.column;
+          if (currentSortColumn === column) {
+            currentSortDirection = currentSortDirection === "asc" ? "desc" : "asc";
+          } else {
+            currentSortColumn = column;
+            currentSortDirection = "asc";
+          }
+          
+          // Actualizar UI de ordenamiento
+          tableHeaders.forEach(header => {
+            header.classList.remove("sort-active");
+            const indicator = header.querySelector(".sort-indicator");
+            if (indicator) indicator.textContent = "";
+          });
+          
+          th.classList.add("sort-active");
+          const indicator = th.querySelector(".sort-indicator");
+          if (indicator) {
+            indicator.textContent = currentSortDirection === "asc" ? "▲" : "▼";
+          }
+          
+          sortFilteredData();
+          renderTable();
+        });
+      });
+
+      // Configurar controles de paginación
+      document.getElementById("btn-page-first").addEventListener("click", () => {
+        currentPage = 1;
+        renderTable();
+      });
+      document.getElementById("btn-page-prev").addEventListener("click", () => {
+        if (currentPage > 1) {
+          currentPage--;
+          renderTable();
+        }
+      });
+      document.getElementById("btn-page-next").addEventListener("click", () => {
+        const totalPages = Math.ceil(filteredData.length / pageSize);
+        if (currentPage < totalPages) {
+          currentPage++;
+          renderTable();
+        }
+      });
+      document.getElementById("btn-page-last").addEventListener("click", () => {
+        const totalPages = Math.ceil(filteredData.length / pageSize);
+        currentPage = totalPages;
+        renderTable();
+      });
+
+      // Formateador de moneda en pesos argentinos
+      const formatter = new Intl.NumberFormat('es-AR', {
+        style: 'currency',
+        currency: 'ARS',
+        minimumFractionDigits: 2
+      });
+
+      // Configuración de autocompletado searchable select
+      function setupSearchableSelect(inputId, dropdownId, items, onSelectCallback) {
+        const input = document.getElementById(inputId);
+        const dropdown = document.getElementById(dropdownId);
+        
+        function populate(filterText = "") {
+          dropdown.innerHTML = "";
+          
+          const allOpt = document.createElement("div");
+          allOpt.className = "search-select-option" + (!input.dataset.value ? " selected" : "");
+          allOpt.textContent = "Todos...";
+          allOpt.addEventListener("mousedown", () => {
+            input.value = "";
+            input.dataset.value = "";
+            closeDropdown();
+            onSelectCallback("");
+          });
+          dropdown.appendChild(allOpt);
+          
+          const filtered = items.filter(item => 
+            item.toLowerCase().includes(filterText.toLowerCase())
+          );
+          
+          filtered.forEach(item => {
+            const opt = document.createElement("div");
+            opt.className = "search-select-option" + (input.dataset.value === item ? " selected" : "");
+            opt.textContent = item;
+            opt.addEventListener("mousedown", () => {
+              input.value = item;
+              input.dataset.value = item;
+              closeDropdown();
+              onSelectCallback(item);
+            });
+            dropdown.appendChild(opt);
+          });
+        }
+        
+        function openDropdown() {
+          dropdown.classList.add("active");
+          populate(input.value);
+        }
+        
+        function closeDropdown() {
+          dropdown.classList.remove("active");
+        }
+        
+        input.addEventListener("focus", openDropdown);
+        input.addEventListener("blur", () => {
+          setTimeout(closeDropdown, 200); // Demora para registrar click en dropdown
+        });
+        
+        input.addEventListener("input", () => {
+          populate(input.value);
+        });
+        
+        input.addEventListener("change", () => {
+          if (!input.value) {
+            input.dataset.value = "";
+            onSelectCallback("");
+          }
+        });
+      }
+
+      // Aplicar Filtros en Tiempo Real
+      function applyFilters() {
+        const dateFrom = document.getElementById("filter-date-from").value;
+        const dateTo = document.getElementById("filter-date-to").value;
+        const selectedProd = document.getElementById("filter-product-input").dataset.value || "";
+        const selectedProv = document.getElementById("filter-provider-input").dataset.value || "";
+        const filterGuia = document.getElementById("filter-guia").value.trim().toLowerCase();
+        const filterLote = document.getElementById("filter-lote").value.trim().toLowerCase();
+        const globalSearch = document.getElementById("global-search").value.trim().toLowerCase();
+
+        filteredData = window.dashboardData.filter(row => {
+          // Filtro rango de fechas
+          if (dateFrom && row.fecha < dateFrom) return false;
+          if (dateTo && row.fecha > dateTo) return false;
+          
+          // Filtro producto
+          if (selectedProd && row.producto !== selectedProd) return false;
+          
+          // Filtro proveedor
+          if (selectedProv && row.proveedor !== selectedProv) return false;
+          
+          // Filtro guia
+          if (filterGuia && !row.guia.toLowerCase().includes(filterGuia)) return false;
+          
+          // Filtro lote
+          if (filterLote && !row.lote.toLowerCase().includes(filterLote)) return false;
+          
+          // Filtro de busqueda global (aplica a todos los campos en la tabla)
+          if (globalSearch) {
+            const matchesSearch = 
+              row.fecha.toLowerCase().includes(globalSearch) ||
+              row.producto.toLowerCase().includes(globalSearch) ||
+              row.variedad.toLowerCase().includes(globalSearch) ||
+              row.proveedor.toLowerCase().includes(globalSearch) ||
+              row.guia.toLowerCase().includes(globalSearch) ||
+              row.lote.toLowerCase().includes(globalSearch) ||
+              row.envase.toLowerCase().includes(globalSearch) ||
+              row.procedencia.toLowerCase().includes(globalSearch) ||
+              row.origen_archivo.toLowerCase().includes(globalSearch);
+              
+            if (!matchesSearch) return false;
+          }
+
+          return true;
+        });
+
+        sortFilteredData();
+        updateKPIs();
+        updateCharts();
+        renderTable();
+      }
+
+      // Ordenar datos filtrados
+      function sortFilteredData() {
+        filteredData.sort((a, b) => {
+          let valA = a[currentSortColumn];
+          let valB = b[currentSortColumn];
+          
+          // Si son numeros
+          if (['bultos', 'recaudado', 'promedio'].includes(currentSortColumn)) {
+            valA = parseFloat(valA) || 0;
+            valB = parseFloat(valB) || 0;
+          } else {
+            // Cadenas
+            valA = String(valA).toLowerCase();
+            valB = String(valB).toLowerCase();
+          }
+
+          if (valA < valB) return currentSortDirection === "asc" ? -1 : 1;
+          if (valA > valB) return currentSortDirection === "asc" ? 1 : -1;
+          return 0;
+        });
+      }
+
+      // Actualizar KPIs
+      function updateKPIs() {
+        let totalRecaudado = 0;
+        let totalBultos = 0;
+
+        filteredData.forEach(row => {
+          totalRecaudado += row.recaudado;
+          totalBultos += row.bultos;
+        });
+
+        const promedio = totalBultos > 0 ? (totalRecaudado / totalBultos) : 0;
+
+        // Render KPIs
+        document.getElementById("kpi-recaudado").textContent = formatter.format(totalRecaudado);
+        document.getElementById("kpi-bultos").textContent = totalBultos.toLocaleString('es-AR');
+        document.getElementById("kpi-promedio").textContent = formatter.format(promedio);
+        
+        // Colores segun recaudacion (si es negativo devolucion, color rojo/amarillo)
+        const recCardValue = document.getElementById("kpi-recaudado");
+        if (totalRecaudado < 0) {
+          recCardValue.style.color = "#fca5a5";
+        } else {
+          recCardValue.style.color = "var(--color-success)";
+        }
+      }
+
+      // Actualizar Gráficos (Chart.js)
+      function updateCharts() {
+        // --- 1. Agregar datos de productos ---
+        const productSums = {};
+        filteredData.forEach(row => {
+          productSums[row.producto] = (productSums[row.producto] || 0) + row.recaudado;
+        });
+
+        // Ordenar productos y tomar top 7
+        const topProducts = Object.entries(productSums)
+          .map(([name, val]) => ({ name, val }))
+          .sort((a, b) => b.val - a.val)
+          .slice(0, 7);
+
+        const prodLabels = topProducts.map(p => p.name);
+        const prodData = topProducts.map(p => p.val);
+
+        // --- 2. Agregar datos de proveedores ---
+        const providerSums = {};
+        filteredData.forEach(row => {
+          providerSums[row.proveedor] = (providerSums[row.proveedor] || 0) + row.recaudado;
+        });
+
+        // Ordenar proveedores y tomar top 10
+        const topProviders = Object.entries(providerSums)
+          .map(([name, val]) => ({ name, val }))
+          .sort((a, b) => b.val - a.val)
+          .slice(0, 10);
+
+        const provLabels = topProviders.map(p => p.name);
+        const provData = topProviders.map(p => p.val);
+
+        // Render / Actualizar Gráfico de Productos
+        if (chartProducts) {
+          chartProducts.data.labels = prodLabels;
+          chartProducts.data.datasets[0].data = prodData;
+          chartProducts.update();
+        } else {
+          const ctx = document.getElementById('chart-products').getContext('2d');
+          chartProducts = new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: prodLabels,
+              datasets: [{
+                label: 'Recaudado ($)',
+                data: prodData,
+                backgroundColor: 'rgba(59, 130, 246, 0.65)',
+                borderColor: '#3b82f6',
+                borderWidth: 1.5,
+                borderRadius: 6
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    label: (context) => `Recaudado: ${formatter.format(context.parsed.x)}`
+                  }
+                }
+              },
+              indexAxis: 'y', // Grafico de barra horizontal
+              scales: {
+                x: {
+                  grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                  ticks: { color: '#9ca3af', font: { family: 'Outfit' } }
+                },
+                y: {
+                  grid: { display: false },
+                  ticks: { color: '#9ca3af', font: { family: 'Outfit', weight: 'bold' } }
+                }
+              }
+            }
+          });
+        }
+
+        // Render / Actualizar Gráfico de Proveedores
+        if (chartProviders) {
+          chartProviders.data.labels = provLabels;
+          chartProviders.data.datasets[0].data = provData;
+          chartProviders.update();
+        } else {
+          const ctx = document.getElementById('chart-providers').getContext('2d');
+          chartProviders = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+              labels: provLabels,
+              datasets: [{
+                data: provData,
+                backgroundColor: [
+                  'rgba(16, 185, 129, 0.65)',
+                  'rgba(59, 130, 246, 0.65)',
+                  'rgba(245, 158, 11, 0.65)',
+                  'rgba(139, 92, 246, 0.65)',
+                  'rgba(239, 68, 68, 0.65)',
+                  'rgba(236, 72, 153, 0.65)',
+                  'rgba(20, 184, 166, 0.65)',
+                  'rgba(99, 102, 241, 0.65)',
+                  'rgba(168, 85, 247, 0.65)',
+                  'rgba(249, 115, 22, 0.65)'
+                ],
+                borderColor: '#131a26',
+                borderWidth: 2
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  position: 'right',
+                  labels: {
+                    color: '#9ca3af',
+                    font: { family: 'Outfit', size: 11 },
+                    boxWidth: 12
+                  }
+                },
+                tooltip: {
+                  callbacks: {
+                    label: (context) => ` ${context.label}: ${formatter.format(context.parsed)}`
+                  }
+                }
+              }
+            }
+          });
+        }
+      }
+
+      // Renderizar la tabla de datos
+      function renderTable() {
+        const tbody = document.getElementById("table-body");
+        tbody.innerHTML = "";
+
+        if (filteredData.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="12" class="no-data-message">
+                No se encontraron registros que coincidan con los filtros aplicados.
+              </td>
+            </tr>
+          `;
+          updatePaginationInfo(0, 0, 0);
+          togglePaginationButtons(0);
+          return;
+        }
+
+        const totalPages = Math.ceil(filteredData.length / pageSize);
+        if (currentPage > totalPages) currentPage = totalPages || 1;
+
+        const startIndex = (currentPage - 1) * pageSize;
+        const endIndex = Math.min(startIndex + pageSize, filteredData.length);
+        const pageData = filteredData.slice(startIndex, endIndex);
+
+        pageData.forEach(row => {
+          const tr = document.createElement("tr");
+          
+          // Formatear Fecha (DD/MM/AAAA)
+          let dateStr = row.fecha;
+          if (dateStr && dateStr.includes('-')) {
+            const parts = dateStr.split('-');
+            if (parts.length === 3) {
+              dateStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
+            }
+          }
+
+          // Badge para origen de archivo
+          const fileBadgeClass = row.origen_archivo.toLowerCase().includes("sucu") 
+            ? "badge badge-suc2" 
+            : "badge badge-source";
+
+          // Formatear clases de numero
+          const bultosClass = row.bultos < 0 ? "col-number col-currency-negative" : "col-number";
+          const recClass = row.recaudado < 0 ? "col-currency col-currency-negative" : "col-currency col-currency-positive";
+
+          tr.innerHTML = `
+            <td>${dateStr}</td>
+            <td style="font-weight:600;">${row.producto}</td>
+            <td>${row.variedad || '-'}</td>
+            <td>${row.proveedor || '-'}</td>
+            <td class="col-number">${row.guia || '-'}</td>
+            <td class="col-number">${row.lote || '-'}</td>
+            <td class="${bultosClass}">${row.bultos}</td>
+            <td class="col-number">${formatter.format(row.promedio)}</td>
+            <td class="${recClass}">${formatter.format(row.recaudado)}</td>
+            <td>${row.envase || '-'}</td>
+            <td>${row.procedencia || '-'}</td>
+            <td><span class="${fileBadgeClass}">${row.origen_archivo}</span></td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        updatePaginationInfo(startIndex + 1, endIndex, filteredData.length);
+        togglePaginationButtons(totalPages);
+        renderPageNumbers(totalPages);
+      }
+
+      // Actualizar información de paginación
+      function updatePaginationInfo(start, end, total) {
+        const info = document.getElementById("pagination-info");
+        if (total === 0) {
+          info.textContent = "Mostrando 0-0 de 0 registros";
+        } else {
+          info.textContent = `Mostrando ${start}-${end} de ${total.toLocaleString('es-AR')} registros`;
+        }
+      }
+
+      // Habilitar/Deshabilitar botones de paginación
+      function togglePaginationButtons(totalPages) {
+        document.getElementById("btn-page-first").disabled = currentPage === 1;
+        document.getElementById("btn-page-prev").disabled = currentPage === 1;
+        document.getElementById("btn-page-next").disabled = currentPage === totalPages || totalPages === 0;
+        document.getElementById("btn-page-last").disabled = currentPage === totalPages || totalPages === 0;
+      }
+
+      // Renderizar números de páginas
+      function renderPageNumbers(totalPages) {
+        const pagesContainer = document.getElementById("pagination-pages");
+        pagesContainer.innerHTML = "";
+        
+        if (totalPages <= 1) return;
+
+        // Mostrar maximo 5 botones de pagina alrededor de la pagina actual
+        let start = Math.max(1, currentPage - 2);
+        let end = Math.min(totalPages, start + 4);
+        
+        if (end - start < 4) {
+          start = Math.max(1, end - 4);
+        }
+
+        for (let i = start; i <= end; i++) {
+          const btn = document.createElement("button");
+          btn.className = "pagination-btn" + (i === currentPage ? " active" : "");
+          btn.textContent = i;
+          btn.addEventListener("click", () => {
+            currentPage = i;
+            renderTable();
+          });
+          pagesContainer.appendChild(btn);
+        }
+      }
+
+        // Ejecutar filtros al cargar inicialmente para dibujar gráficos e inicializar tabla
+        applyFilters();
+      } // Fin de initDashboard
+    }); // Fin de DOMContentLoaded
+  </script>
+</body>
+</html>
