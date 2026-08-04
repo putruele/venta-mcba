@@ -166,6 +166,15 @@ def main():
                     ):
                         nomprv = "BONELLA, JORGE ALCIDES"
                     
+                    # Unificar proveedor "COMERCIAL" y "A.ROCKY" a "A.ROCKY S."
+                    elif (
+                        nomprv_upper == "COMERCIAL" or
+                        nomprv_upper == "A.ROCKY S." or
+                        nomprv_upper == "A.ROCKY" or
+                        "A.ROCKY" in nomprv_upper
+                    ):
+                        nomprv = "A.ROCKY S."
+                    
                     # Numeric conversions with fallback to 0
                     try:
                         ventas = int(row.get('ventas', 0))
