@@ -116,7 +116,7 @@
         <!-- Graphs Grid -->
         <div class="charts-grid">
           <div class="chart-card">
-            <div class="chart-title">Top Productos por Recaudación</div>
+            <div class="chart-title" id="chart-products-title">Top Productos por Recaudación</div>
             <div class="chart-container">
               <canvas id="chart-products"></canvas>
             </div>
@@ -321,9 +321,72 @@
       let chartProducts = null;
       let chartProviders = null;
 
-      // Cargar valores para filtros (extraer opciones unicas)
-      const productsList = [...new Set(window.dashboardData.map(d => d.producto).filter(Boolean))].sort();
-      const providersList = [...new Set(window.dashboardData.map(d => d.proveedor).filter(Boolean))].sort();
+      // Funciones para extraer opciones dinámicas (filtros dependientes)
+      function getAvailableProducts() {
+        const dateFrom = document.getElementById("filter-date-from").value;
+        const dateTo = document.getElementById("filter-date-to").value;
+        const selectedProv = document.getElementById("filter-provider-input").dataset.value || "";
+        const filterGuia = document.getElementById("filter-guia").value.trim().toLowerCase();
+        const filterLote = document.getElementById("filter-lote").value.trim().toLowerCase();
+        const globalSearch = document.getElementById("global-search").value.trim().toLowerCase();
+
+        const matchRows = window.dashboardData.filter(row => {
+          if (dateFrom && row.fecha < dateFrom) return false;
+          if (dateTo && row.fecha > dateTo) return false;
+          if (selectedProv && row.proveedor !== selectedProv) return false;
+          if (filterGuia && !row.guia.toLowerCase().includes(filterGuia)) return false;
+          if (filterLote && !row.lote.toLowerCase().includes(filterLote)) return false;
+          if (globalSearch) {
+            const matchesSearch = 
+              row.fecha.toLowerCase().includes(globalSearch) ||
+              row.producto.toLowerCase().includes(globalSearch) ||
+              row.variedad.toLowerCase().includes(globalSearch) ||
+              row.proveedor.toLowerCase().includes(globalSearch) ||
+              row.guia.toLowerCase().includes(globalSearch) ||
+              row.lote.toLowerCase().includes(globalSearch) ||
+              row.envase.toLowerCase().includes(globalSearch) ||
+              row.procedencia.toLowerCase().includes(globalSearch) ||
+              row.origen_archivo.toLowerCase().includes(globalSearch);
+            if (!matchesSearch) return false;
+          }
+          return true;
+        });
+
+        return [...new Set(matchRows.map(d => d.producto).filter(Boolean))].sort();
+      }
+
+      function getAvailableProviders() {
+        const dateFrom = document.getElementById("filter-date-from").value;
+        const dateTo = document.getElementById("filter-date-to").value;
+        const selectedProd = document.getElementById("filter-product-input").dataset.value || "";
+        const filterGuia = document.getElementById("filter-guia").value.trim().toLowerCase();
+        const filterLote = document.getElementById("filter-lote").value.trim().toLowerCase();
+        const globalSearch = document.getElementById("global-search").value.trim().toLowerCase();
+
+        const matchRows = window.dashboardData.filter(row => {
+          if (dateFrom && row.fecha < dateFrom) return false;
+          if (dateTo && row.fecha > dateTo) return false;
+          if (selectedProd && row.producto !== selectedProd) return false;
+          if (filterGuia && !row.guia.toLowerCase().includes(filterGuia)) return false;
+          if (filterLote && !row.lote.toLowerCase().includes(filterLote)) return false;
+          if (globalSearch) {
+            const matchesSearch = 
+              row.fecha.toLowerCase().includes(globalSearch) ||
+              row.producto.toLowerCase().includes(globalSearch) ||
+              row.variedad.toLowerCase().includes(globalSearch) ||
+              row.proveedor.toLowerCase().includes(globalSearch) ||
+              row.guia.toLowerCase().includes(globalSearch) ||
+              row.lote.toLowerCase().includes(globalSearch) ||
+              row.envase.toLowerCase().includes(globalSearch) ||
+              row.procedencia.toLowerCase().includes(globalSearch) ||
+              row.origen_archivo.toLowerCase().includes(globalSearch);
+            if (!matchesSearch) return false;
+          }
+          return true;
+        });
+
+        return [...new Set(matchRows.map(d => d.proveedor).filter(Boolean))].sort();
+      }
 
       // Configurar inputs de rango de fechas con limites de los datos
       const dates = window.dashboardData.map(d => d.fecha).filter(Boolean).sort();
@@ -334,13 +397,13 @@
         document.getElementById("filter-date-to").max = dates[dates.length - 1];
       }
 
-      // Inicializar selectores autocompletables personalizados
-      setupSearchableSelect("filter-product-input", "filter-product-dropdown", productsList, () => {
+      // Inicializar selectores autocompletables personalizados con getters dinámicos
+      setupSearchableSelect("filter-product-input", "filter-product-dropdown", getAvailableProducts, () => {
         currentPage = 1;
         applyFilters();
       });
 
-      setupSearchableSelect("filter-provider-input", "filter-provider-dropdown", providersList, () => {
+      setupSearchableSelect("filter-provider-input", "filter-provider-dropdown", getAvailableProviders, () => {
         currentPage = 1;
         applyFilters();
       });
@@ -442,7 +505,7 @@
       });
 
       // Configuración de autocompletado searchable select
-      function setupSearchableSelect(inputId, dropdownId, items, onSelectCallback) {
+      function setupSearchableSelect(inputId, dropdownId, getItemsFn, onSelectCallback) {
         const input = document.getElementById(inputId);
         const dropdown = document.getElementById(dropdownId);
         
@@ -460,6 +523,7 @@
           });
           dropdown.appendChild(allOpt);
           
+          const items = getItemsFn();
           const filtered = items.filter(item => 
             item.toLowerCase().includes(filterText.toLowerCase())
           );
@@ -606,20 +670,58 @@
 
       // Actualizar Gráficos (Chart.js)
       function updateCharts() {
-        // --- 1. Agregar datos de productos ---
-        const productSums = {};
-        filteredData.forEach(row => {
-          productSums[row.producto] = (productSums[row.producto] || 0) + row.recaudado;
-        });
+        const selectedProd = document.getElementById("filter-product-input").dataset.value || "";
+        
+        let prodLabels = [];
+        let prodData = [];
+        let chartLabel = "";
+        let tooltipCallback = null;
 
-        // Ordenar productos y tomar top 7
-        const topProducts = Object.entries(productSums)
-          .map(([name, val]) => ({ name, val }))
-          .sort((a, b) => b.val - a.val)
-          .slice(0, 7);
+        if (selectedProd) {
+          // Si hay un producto seleccionado: Gráfico comparativo de precios promedio por proveedor
+          const providerStats = {};
+          filteredData.forEach(row => {
+            if (!providerStats[row.proveedor]) {
+              providerStats[row.proveedor] = { recaudado: 0, bultos: 0 };
+            }
+            providerStats[row.proveedor].recaudado += row.recaudado;
+            providerStats[row.proveedor].bultos += row.bultos;
+          });
 
-        const prodLabels = topProducts.map(p => p.name);
-        const prodData = topProducts.map(p => p.val);
+          const providerAverages = Object.entries(providerStats)
+            .map(([name, stats]) => {
+              const avg = stats.bultos > 0 ? (stats.recaudado / stats.bultos) : 0;
+              return { name, val: avg };
+            })
+            .filter(p => p.val > 0)
+            .sort((a, b) => b.val - a.val)
+            .slice(0, 10);
+
+          prodLabels = providerAverages.map(p => p.name);
+          prodData = providerAverages.map(p => p.val);
+          chartLabel = 'Precio Prom. por Bulto ($)';
+          
+          document.getElementById("chart-products-title").textContent = `Precio Promedio por Proveedor (${selectedProd})`;
+          tooltipCallback = (context) => `Promedio: ${formatter.format(context.parsed.x)}`;
+        } else {
+          // Si no hay producto: Top Productos por Recaudación original
+          const productSums = {};
+          filteredData.forEach(row => {
+            productSums[row.producto] = (productSums[row.producto] || 0) + row.recaudado;
+          });
+
+          const topProducts = Object.entries(productSums)
+            .map(([name, val]) => ({ name, val }))
+            .sort((a, b) => b.val - a.val)
+            .slice(0, 7);
+
+          prodLabels = topProducts.map(p => p.name);
+          prodData = topProducts.map(p => p.val);
+          chartLabel = 'Recaudado ($)';
+          
+          document.getElementById("chart-products-title").textContent = "Top Productos por Recaudación";
+          tooltipCallback = (context) => `Recaudado: ${formatter.format(context.parsed.x)}`;
+        }
 
         // --- 2. Agregar datos de proveedores ---
         const providerSums = {};
@@ -639,7 +741,9 @@
         // Render / Actualizar Gráfico de Productos
         if (chartProducts) {
           chartProducts.data.labels = prodLabels;
+          chartProducts.data.datasets[0].label = chartLabel;
           chartProducts.data.datasets[0].data = prodData;
+          chartProducts.options.plugins.tooltip.callbacks.label = tooltipCallback;
           chartProducts.update();
         } else {
           const ctx = document.getElementById('chart-products').getContext('2d');
@@ -648,7 +752,7 @@
             data: {
               labels: prodLabels,
               datasets: [{
-                label: 'Recaudado ($)',
+                label: chartLabel,
                 data: prodData,
                 backgroundColor: 'rgba(59, 130, 246, 0.65)',
                 borderColor: '#3b82f6',
@@ -663,7 +767,7 @@
                 legend: { display: false },
                 tooltip: {
                   callbacks: {
-                    label: (context) => `Recaudado: ${formatter.format(context.parsed.x)}`
+                    label: tooltipCallback
                   }
                 }
               },
