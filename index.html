@@ -697,12 +697,13 @@
         const selectedProd = document.getElementById("filter-product-input").dataset.value || "";
         
         let prodLabels = [];
-        let prodData = [];
-        let chartLabel = "";
-        let tooltipCallback = null;
+        let prodData1 = [];
+        let prodData2 = [];
+        let chartLabel1 = "";
+        let chartLabel2 = "";
 
         if (selectedProd) {
-          // Si hay un producto seleccionado: Gráfico comparativo de precios promedio por proveedor
+          // Si hay un producto seleccionado: Gráfico comparativo de precios promedio y bultos por proveedor
           const providerStats = {};
           filteredData.forEach(row => {
             if (!providerStats[row.proveedor]) {
@@ -712,41 +713,47 @@
             providerStats[row.proveedor].bultos += row.bultos;
           });
 
-          const providerAverages = Object.entries(providerStats)
+          const providerStatsList = Object.entries(providerStats)
             .map(([name, stats]) => {
               const avg = stats.bultos > 0 ? (stats.recaudado / stats.bultos) : 0;
-              return { name, val: avg };
+              return { name, avg, bultos: stats.bultos };
             })
-            .filter(p => p.val > 0)
-            .sort((a, b) => b.val - a.val)
+            .filter(p => p.avg > 0)
+            .sort((a, b) => b.avg - a.avg)
             .slice(0, 10);
 
-          prodLabels = providerAverages.map(p => p.name);
-          prodData = providerAverages.map(p => p.val);
-          chartLabel = 'Precio Prom. por Bulto ($)';
+          prodLabels = providerStatsList.map(p => p.name);
+          prodData1 = providerStatsList.map(p => p.avg);
+          prodData2 = providerStatsList.map(p => p.bultos);
+          chartLabel1 = 'Precio Prom. por Bulto ($)';
+          chartLabel2 = 'Bultos Vendidos';
           
-          document.getElementById("chart-products-title").textContent = `Precio Promedio por Proveedor (${selectedProd})`;
+          document.getElementById("chart-products-title").textContent = `Precio Promedio y Bultos por Proveedor (${selectedProd})`;
           document.getElementById("btn-clear-chart-product").style.display = "inline-block";
-          tooltipCallback = (context) => `Promedio: ${formatter.format(context.parsed.x)}`;
         } else {
-          // Si no hay producto: Top Productos por Recaudación original
-          const productSums = {};
+          // Si no hay producto: Top Productos por Recaudación original y bultos
+          const productStats = {};
           filteredData.forEach(row => {
-            productSums[row.producto] = (productSums[row.producto] || 0) + row.recaudado;
+            if (!productStats[row.producto]) {
+              productStats[row.producto] = { recaudado: 0, bultos: 0 };
+            }
+            productStats[row.producto].recaudado += row.recaudado;
+            productStats[row.producto].bultos += row.bultos;
           });
 
-          const topProducts = Object.entries(productSums)
-            .map(([name, val]) => ({ name, val }))
-            .sort((a, b) => b.val - a.val)
+          const topProducts = Object.entries(productStats)
+            .map(([name, stats]) => ({ name, recaudado: stats.recaudado, bultos: stats.bultos }))
+            .sort((a, b) => b.recaudado - a.recaudado)
             .slice(0, 12);
 
           prodLabels = topProducts.map(p => p.name);
-          prodData = topProducts.map(p => p.val);
-          chartLabel = 'Recaudado ($)';
+          prodData1 = topProducts.map(p => p.recaudado);
+          prodData2 = topProducts.map(p => p.bultos);
+          chartLabel1 = 'Recaudado ($)';
+          chartLabel2 = 'Bultos Vendidos';
           
           document.getElementById("chart-products-title").textContent = "Top Productos por Recaudación";
           document.getElementById("btn-clear-chart-product").style.display = "none";
-          tooltipCallback = (context) => `Recaudado: ${formatter.format(context.parsed.x)}`;
         }
 
         // --- 2. Agregar datos de proveedores ---
@@ -774,9 +781,10 @@
         // Render / Actualizar Gráfico de Productos
         if (chartProducts) {
           chartProducts.data.labels = prodLabels;
-          chartProducts.data.datasets[0].label = chartLabel;
-          chartProducts.data.datasets[0].data = prodData;
-          chartProducts.options.plugins.tooltip.callbacks.label = tooltipCallback;
+          chartProducts.data.datasets[0].label = chartLabel1;
+          chartProducts.data.datasets[0].data = prodData1;
+          chartProducts.data.datasets[1].label = chartLabel2;
+          chartProducts.data.datasets[1].data = prodData2;
           chartProducts.update();
         } else {
           const ctx = document.getElementById('chart-products').getContext('2d');
@@ -784,14 +792,26 @@
             type: 'bar',
             data: {
               labels: prodLabels,
-              datasets: [{
-                label: chartLabel,
-                data: prodData,
-                backgroundColor: 'rgba(59, 130, 246, 0.65)',
-                borderColor: '#3b82f6',
-                borderWidth: 1.5,
-                borderRadius: 6
-              }]
+              datasets: [
+                {
+                  label: chartLabel1,
+                  data: prodData1,
+                  xAxisID: 'x1',
+                  backgroundColor: 'rgba(59, 130, 246, 0.65)',
+                  borderColor: '#3b82f6',
+                  borderWidth: 1.5,
+                  borderRadius: 6
+                },
+                {
+                  label: chartLabel2,
+                  data: prodData2,
+                  xAxisID: 'x2',
+                  backgroundColor: 'rgba(16, 185, 129, 0.65)',
+                  borderColor: '#10b981',
+                  borderWidth: 1.5,
+                  borderRadius: 6
+                }
+              ]
             },
             options: {
               responsive: true,
@@ -820,22 +840,44 @@
                 event.native.target.style.cursor = chartElement.length ? 'pointer' : 'default';
               },
               plugins: {
-                legend: { display: false },
+                legend: { 
+                  display: true,
+                  labels: {
+                    color: '#9ca3af',
+                    font: { family: 'Outfit', size: 10 }
+                  }
+                },
                 tooltip: {
                   callbacks: {
-                    label: tooltipCallback
+                    label: (context) => {
+                      const datasetLabel = context.dataset.label || '';
+                      const value = context.parsed.x;
+                      if (context.datasetIndex === 0) {
+                        return `${datasetLabel}: ${formatter.format(value)}`;
+                      } else {
+                        return `${datasetLabel}: ${value.toLocaleString('es-AR')}`;
+                      }
+                    }
                   }
                 }
               },
               indexAxis: 'y', // Grafico de barra horizontal
               scales: {
-                x: {
+                x1: {
+                  type: 'linear',
+                  position: 'bottom',
                   grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                  ticks: { color: '#9ca3af', font: { family: 'Outfit' } }
+                  ticks: { color: '#9ca3af', font: { family: 'Outfit', size: 9 } }
+                },
+                x2: {
+                  type: 'linear',
+                  position: 'top',
+                  grid: { display: false },
+                  ticks: { color: '#10b981', font: { family: 'Outfit', size: 9 } }
                 },
                 y: {
                   grid: { display: false },
-                  ticks: { color: '#9ca3af', font: { family: 'Outfit', weight: 'bold' } }
+                  ticks: { color: '#9ca3af', font: { family: 'Outfit', weight: 'bold', size: 10 } }
                 }
               }
             }
