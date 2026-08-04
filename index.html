@@ -763,6 +763,29 @@
             options: {
               responsive: true,
               maintainAspectRatio: false,
+              onClick: (event, elements) => {
+                if (elements.length > 0) {
+                  const firstElement = elements[0];
+                  const index = firstElement.index;
+                  const label = chartProducts.data.labels[index];
+                  
+                  const selectedProd = document.getElementById("filter-product-input").dataset.value || "";
+                  if (selectedProd) {
+                    const provInput = document.getElementById("filter-provider-input");
+                    provInput.value = label;
+                    provInput.dataset.value = label;
+                  } else {
+                    const prodInput = document.getElementById("filter-product-input");
+                    prodInput.value = label;
+                    prodInput.dataset.value = label;
+                  }
+                  currentPage = 1;
+                  applyFilters();
+                }
+              },
+              onHover: (event, chartElement) => {
+                event.native.target.style.cursor = chartElement.length ? 'pointer' : 'default';
+              },
               plugins: {
                 legend: { display: false },
                 tooltip: {
@@ -818,6 +841,23 @@
             options: {
               responsive: true,
               maintainAspectRatio: false,
+              onClick: (event, elements) => {
+                if (elements.length > 0) {
+                  const firstElement = elements[0];
+                  const index = firstElement.index;
+                  const label = chartProviders.data.labels[index];
+                  
+                  const provInput = document.getElementById("filter-provider-input");
+                  provInput.value = label;
+                  provInput.dataset.value = label;
+                  
+                  currentPage = 1;
+                  applyFilters();
+                }
+              },
+              onHover: (event, chartElement) => {
+                event.native.target.style.cursor = chartElement.length ? 'pointer' : 'default';
+              },
               plugins: {
                 legend: {
                   position: 'right',
