@@ -116,7 +116,10 @@
         <!-- Graphs Grid -->
         <div class="charts-grid">
           <div class="chart-card">
-            <div class="chart-title" id="chart-products-title">Top Productos por Recaudación</div>
+            <div class="chart-header-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+              <div class="chart-title" id="chart-products-title" style="margin-bottom: 0;">Top Productos por Recaudación</div>
+              <button id="btn-clear-chart-product" class="btn-reset" style="display: none; padding: 0.25rem 0.6rem; font-size: 0.75rem; margin-top: 0; border-radius: 6px; font-weight: 600;">← Volver</button>
+            </div>
             <div class="chart-container">
               <canvas id="chart-products"></canvas>
             </div>
@@ -443,6 +446,15 @@
         applyFilters();
       });
 
+      // Botón restablecer filtro de producto en gráfico
+      document.getElementById("btn-clear-chart-product").addEventListener("click", () => {
+        const prodInput = document.getElementById("filter-product-input");
+        prodInput.value = "";
+        prodInput.dataset.value = "";
+        currentPage = 1;
+        applyFilters();
+      });
+
       // Configurar ordenamiento en tabla
       const tableHeaders = document.querySelectorAll("#sales-table th");
       tableHeaders.forEach(th => {
@@ -702,6 +714,7 @@
           chartLabel = 'Precio Prom. por Bulto ($)';
           
           document.getElementById("chart-products-title").textContent = `Precio Promedio por Proveedor (${selectedProd})`;
+          document.getElementById("btn-clear-chart-product").style.display = "inline-block";
           tooltipCallback = (context) => `Promedio: ${formatter.format(context.parsed.x)}`;
         } else {
           // Si no hay producto: Top Productos por Recaudación original
@@ -713,13 +726,14 @@
           const topProducts = Object.entries(productSums)
             .map(([name, val]) => ({ name, val }))
             .sort((a, b) => b.val - a.val)
-            .slice(0, 7);
+            .slice(0, 12);
 
           prodLabels = topProducts.map(p => p.name);
           prodData = topProducts.map(p => p.val);
           chartLabel = 'Recaudado ($)';
           
           document.getElementById("chart-products-title").textContent = "Top Productos por Recaudación";
+          document.getElementById("btn-clear-chart-product").style.display = "none";
           tooltipCallback = (context) => `Recaudado: ${formatter.format(context.parsed.x)}`;
         }
 
