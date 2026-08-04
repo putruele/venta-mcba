@@ -711,3 +711,20 @@ tr:hover td {
   animation: shake 0.4s ease-in-out;
 }
 
+/* Selector de Metricas Global */
+.metric-tab {
+  background: transparent;
+  color: var(--text-secondary);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.metric-tab.active {
+  background: var(--color-accent) !important;
+  color: white !important;
+}
+
+.metric-tab:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+

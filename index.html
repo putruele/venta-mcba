@@ -39,8 +39,14 @@
         <h1>Reporte de Ventas <span>Mercado Central</span></h1>
         <p style="color: var(--text-secondary); margin-top: 0.25rem;">Visualización, control y filtros detallados de planillas de ventas consolidada</p>
       </div>
-      <div class="last-update-badge" id="last-update-badge">
-        Actualizado: Cargando...
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <div class="metric-selector" style="display: flex; gap: 0.25rem; background: var(--bg-secondary); padding: 0.25rem; border-radius: 8px; border: 1px solid var(--border-color);">
+          <button id="metric-btn-value" class="metric-tab active" style="padding: 0.35rem 0.75rem; border: none; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; font-family: inherit;">Valor</button>
+          <button id="metric-btn-volume" class="metric-tab" style="padding: 0.35rem 0.75rem; border: none; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; font-family: inherit;">Bultos</button>
+        </div>
+        <div class="last-update-badge" id="last-update-badge">
+          Actualizado: Cargando...
+        </div>
       </div>
     </header>
 
@@ -316,12 +322,13 @@
         // Actualizar badge de última actualización
         document.getElementById("last-update-badge").textContent = `Actualizado: ${window.lastUpdate || "Recién"}`;
 
-      // Configuración de paginación y ordenamiento
+      // Configuración de paginación, ordenamiento y métrica activa
       let currentPage = 1;
       let pageSize = 25;
       let currentSortColumn = "fecha";
       let currentSortDirection = "desc";
       let filteredData = [...window.dashboardData];
+      let currentMetric = "value"; // "value" para Valor, "volume" para Bultos
 
       // Instancias de graficos
       let chartProducts = null;
@@ -464,6 +471,26 @@
         provInput.value = "";
         provInput.dataset.value = "";
         currentPage = 1;
+        applyFilters();
+      });
+
+      // Selectores de métricas globales (Valor / Bultos)
+      const btnMetricValue = document.getElementById("metric-btn-value");
+      const btnMetricVolume = document.getElementById("metric-btn-volume");
+
+      btnMetricValue.addEventListener("click", () => {
+        if (currentMetric === "value") return;
+        currentMetric = "value";
+        btnMetricValue.classList.add("active");
+        btnMetricVolume.classList.remove("active");
+        applyFilters();
+      });
+
+      btnMetricVolume.addEventListener("click", () => {
+        if (currentMetric === "volume") return;
+        currentMetric = "volume";
+        btnMetricVolume.classList.add("active");
+        btnMetricValue.classList.remove("active");
         applyFilters();
       });
 
@@ -697,13 +724,12 @@
         const selectedProd = document.getElementById("filter-product-input").dataset.value || "";
         
         let prodLabels = [];
-        let prodData1 = [];
-        let prodData2 = [];
-        let chartLabel1 = "";
-        let chartLabel2 = "";
+        let prodData = [];
+        let chartLabel = "";
+        let tooltipCallback = null;
 
         if (selectedProd) {
-          // Si hay un producto seleccionado: Gráfico comparativo de precios promedio y bultos por proveedor
+          // Si hay un producto seleccionado: Gráfico comparativo por proveedor
           const providerStats = {};
           filteredData.forEach(row => {
             if (!providerStats[row.proveedor]) {
@@ -713,25 +739,40 @@
             providerStats[row.proveedor].bultos += row.bultos;
           });
 
-          const providerStatsList = Object.entries(providerStats)
-            .map(([name, stats]) => {
-              const avg = stats.bultos > 0 ? (stats.recaudado / stats.bultos) : 0;
-              return { name, avg, bultos: stats.bultos };
-            })
-            .filter(p => p.avg > 0)
-            .sort((a, b) => b.avg - a.avg)
-            .slice(0, 10);
+          if (currentMetric === "value") {
+            // Mapear a Precio Promedio
+            const providerAverages = Object.entries(providerStats)
+              .map(([name, stats]) => {
+                const avg = stats.bultos > 0 ? (stats.recaudado / stats.bultos) : 0;
+                return { name, val: avg };
+              })
+              .filter(p => p.val > 0)
+              .sort((a, b) => b.val - a.val)
+              .slice(0, 10);
 
-          prodLabels = providerStatsList.map(p => p.name);
-          prodData1 = providerStatsList.map(p => p.avg);
-          prodData2 = providerStatsList.map(p => p.bultos);
-          chartLabel1 = 'Precio Prom. por Bulto ($)';
-          chartLabel2 = 'Bultos Vendidos';
+            prodLabels = providerAverages.map(p => p.name);
+            prodData = providerAverages.map(p => p.val);
+            chartLabel = 'Precio Prom. por Bulto ($)';
+            document.getElementById("chart-products-title").textContent = `Precio Promedio por Proveedor (${selectedProd})`;
+            tooltipCallback = (context) => `Promedio: ${formatter.format(context.parsed.x)}`;
+          } else {
+            // Mapear a Bultos Totales
+            const providerBultosList = Object.entries(providerStats)
+              .map(([name, stats]) => ({ name, val: stats.bultos }))
+              .filter(p => p.val > 0)
+              .sort((a, b) => b.val - a.val)
+              .slice(0, 10);
+
+            prodLabels = providerBultosList.map(p => p.name);
+            prodData = providerBultosList.map(p => p.val);
+            chartLabel = 'Bultos Vendidos';
+            document.getElementById("chart-products-title").textContent = `Bultos Vendidos por Proveedor (${selectedProd})`;
+            tooltipCallback = (context) => `Bultos: ${context.parsed.x.toLocaleString('es-AR')}`;
+          }
           
-          document.getElementById("chart-products-title").textContent = `Precio Promedio y Bultos por Proveedor (${selectedProd})`;
           document.getElementById("btn-clear-chart-product").style.display = "inline-block";
         } else {
-          // Si no hay producto: Top Productos por Recaudación original y bultos
+          // Si no hay producto seleccionado: Top Productos
           const productStats = {};
           filteredData.forEach(row => {
             if (!productStats[row.producto]) {
@@ -741,25 +782,41 @@
             productStats[row.producto].bultos += row.bultos;
           });
 
-          const topProducts = Object.entries(productStats)
-            .map(([name, stats]) => ({ name, recaudado: stats.recaudado, bultos: stats.bultos }))
-            .sort((a, b) => b.recaudado - a.recaudado)
-            .slice(0, 12);
+          if (currentMetric === "value") {
+            const topProducts = Object.entries(productStats)
+              .map(([name, stats]) => ({ name, val: stats.recaudado }))
+              .sort((a, b) => b.val - a.val)
+              .slice(0, 12);
 
-          prodLabels = topProducts.map(p => p.name);
-          prodData1 = topProducts.map(p => p.recaudado);
-          prodData2 = topProducts.map(p => p.bultos);
-          chartLabel1 = 'Recaudado ($)';
-          chartLabel2 = 'Bultos Vendidos';
-          
-          document.getElementById("chart-products-title").textContent = "Top Productos por Recaudación";
+            prodLabels = topProducts.map(p => p.name);
+            prodData = topProducts.map(p => p.val);
+            chartLabel = 'Recaudado ($)';
+            document.getElementById("chart-products-title").textContent = "Top Productos por Recaudación";
+            tooltipCallback = (context) => `Recaudado: ${formatter.format(context.parsed.x)}`;
+          } else {
+            const topProducts = Object.entries(productStats)
+              .map(([name, stats]) => ({ name, val: stats.bultos }))
+              .sort((a, b) => b.val - a.val)
+              .slice(0, 12);
+
+            prodLabels = topProducts.map(p => p.name);
+            prodData = topProducts.map(p => p.val);
+            chartLabel = 'Bultos Vendidos';
+            document.getElementById("chart-products-title").textContent = "Top Productos por Bultos Vendidos";
+            tooltipCallback = (context) => `Bultos: ${context.parsed.x.toLocaleString('es-AR')}`;
+          }
+
           document.getElementById("btn-clear-chart-product").style.display = "none";
         }
 
-        // --- 2. Agregar datos de proveedores ---
+        // --- 2. Agregar datos de proveedores (Dona) ---
         const providerSums = {};
         filteredData.forEach(row => {
-          providerSums[row.proveedor] = (providerSums[row.proveedor] || 0) + row.recaudado;
+          if (currentMetric === "value") {
+            providerSums[row.proveedor] = (providerSums[row.proveedor] || 0) + row.recaudado;
+          } else {
+            providerSums[row.proveedor] = (providerSums[row.proveedor] || 0) + row.bultos;
+          }
         });
 
         // Ordenar proveedores y tomar top 10
@@ -778,13 +835,39 @@
           document.getElementById("btn-clear-chart-provider").style.display = "none";
         }
 
+        if (currentMetric === "value") {
+          document.querySelector(".chart-card:nth-child(2) .chart-title").textContent = "Participación de Proveedores (Top 10)";
+        } else {
+          document.querySelector(".chart-card:nth-child(2) .chart-title").textContent = "Participación de Proveedores por Bultos (Top 10)";
+        }
+
         // Render / Actualizar Gráfico de Productos
         if (chartProducts) {
           chartProducts.data.labels = prodLabels;
-          chartProducts.data.datasets[0].label = chartLabel1;
-          chartProducts.data.datasets[0].data = prodData1;
-          chartProducts.data.datasets[1].label = chartLabel2;
-          chartProducts.data.datasets[1].data = prodData2;
+          chartProducts.data.datasets[0].label = chartLabel;
+          chartProducts.data.datasets[0].data = prodData;
+          
+          // Eliminar el segundo dataset si quedó de la versión anterior
+          if (chartProducts.data.datasets.length > 1) {
+            chartProducts.data.datasets.pop();
+          }
+          
+          // Restaurar escalas a eje simple
+          if (chartProducts.options.scales.x1) {
+            chartProducts.options.scales = {
+              x: {
+                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                ticks: { color: '#9ca3af', font: { family: 'Outfit' } }
+              },
+              y: {
+                grid: { display: false },
+                ticks: { color: '#9ca3af', font: { family: 'Outfit', weight: 'bold' } }
+              }
+            };
+            chartProducts.data.datasets[0].xAxisID = 'x';
+          }
+          
+          chartProducts.options.plugins.tooltip.callbacks.label = tooltipCallback;
           chartProducts.update();
         } else {
           const ctx = document.getElementById('chart-products').getContext('2d');
@@ -792,26 +875,14 @@
             type: 'bar',
             data: {
               labels: prodLabels,
-              datasets: [
-                {
-                  label: chartLabel1,
-                  data: prodData1,
-                  xAxisID: 'x1',
-                  backgroundColor: 'rgba(59, 130, 246, 0.65)',
-                  borderColor: '#3b82f6',
-                  borderWidth: 1.5,
-                  borderRadius: 6
-                },
-                {
-                  label: chartLabel2,
-                  data: prodData2,
-                  xAxisID: 'x2',
-                  backgroundColor: 'rgba(16, 185, 129, 0.65)',
-                  borderColor: '#10b981',
-                  borderWidth: 1.5,
-                  borderRadius: 6
-                }
-              ]
+              datasets: [{
+                label: chartLabel,
+                data: prodData,
+                backgroundColor: 'rgba(59, 130, 246, 0.65)',
+                borderColor: '#3b82f6',
+                borderWidth: 1.5,
+                borderRadius: 6
+              }]
             },
             options: {
               responsive: true,
@@ -840,44 +911,22 @@
                 event.native.target.style.cursor = chartElement.length ? 'pointer' : 'default';
               },
               plugins: {
-                legend: { 
-                  display: true,
-                  labels: {
-                    color: '#9ca3af',
-                    font: { family: 'Outfit', size: 10 }
-                  }
-                },
+                legend: { display: false },
                 tooltip: {
                   callbacks: {
-                    label: (context) => {
-                      const datasetLabel = context.dataset.label || '';
-                      const value = context.parsed.x;
-                      if (context.datasetIndex === 0) {
-                        return `${datasetLabel}: ${formatter.format(value)}`;
-                      } else {
-                        return `${datasetLabel}: ${value.toLocaleString('es-AR')}`;
-                      }
-                    }
+                    label: tooltipCallback
                   }
                 }
               },
               indexAxis: 'y', // Grafico de barra horizontal
               scales: {
-                x1: {
-                  type: 'linear',
-                  position: 'bottom',
+                x: {
                   grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                  ticks: { color: '#9ca3af', font: { family: 'Outfit', size: 9 } }
-                },
-                x2: {
-                  type: 'linear',
-                  position: 'top',
-                  grid: { display: false },
-                  ticks: { color: '#10b981', font: { family: 'Outfit', size: 9 } }
+                  ticks: { color: '#9ca3af', font: { family: 'Outfit' } }
                 },
                 y: {
                   grid: { display: false },
-                  ticks: { color: '#9ca3af', font: { family: 'Outfit', weight: 'bold', size: 10 } }
+                  ticks: { color: '#9ca3af', font: { family: 'Outfit', weight: 'bold' } }
                 }
               }
             }
@@ -888,6 +937,13 @@
         if (chartProviders) {
           chartProviders.data.labels = provLabels;
           chartProviders.data.datasets[0].data = provData;
+          chartProviders.options.plugins.tooltip.callbacks.label = (context) => {
+            if (currentMetric === "value") {
+              return ` ${context.label}: ${formatter.format(context.parsed)}`;
+            } else {
+              return ` ${context.label}: ${context.parsed.toLocaleString('es-AR')} bultos`;
+            }
+          };
           chartProviders.update();
         } else {
           const ctx = document.getElementById('chart-providers').getContext('2d');
@@ -944,13 +1000,20 @@
                 },
                 tooltip: {
                   callbacks: {
-                    label: (context) => ` ${context.label}: ${formatter.format(context.parsed)}`
+                    label: (context) => {
+                      if (currentMetric === "value") {
+                        return ` ${context.label}: ${formatter.format(context.parsed)}`;
+                      } else {
+                        return ` ${context.label}: ${context.parsed.toLocaleString('es-AR')} bultos`;
+                      }
+                    }
                   }
                 }
               }
             }
           });
         }
+      }
       }
 
       // Renderizar la tabla de datos
