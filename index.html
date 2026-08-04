@@ -125,7 +125,10 @@
             </div>
           </div>
           <div class="chart-card">
-            <div class="chart-title">Participación de Proveedores (Top 10)</div>
+            <div class="chart-header-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+              <div class="chart-title" style="margin-bottom: 0;">Participación de Proveedores (Top 10)</div>
+              <button id="btn-clear-chart-provider" class="btn-reset" style="display: none; padding: 0.25rem 0.6rem; font-size: 0.75rem; margin-top: 0; border-radius: 6px; font-weight: 600;">← Volver</button>
+            </div>
             <div class="chart-container">
               <canvas id="chart-providers"></canvas>
             </div>
@@ -455,6 +458,15 @@
         applyFilters();
       });
 
+      // Botón restablecer filtro de proveedor en gráfico
+      document.getElementById("btn-clear-chart-provider").addEventListener("click", () => {
+        const provInput = document.getElementById("filter-provider-input");
+        provInput.value = "";
+        provInput.dataset.value = "";
+        currentPage = 1;
+        applyFilters();
+      });
+
       // Configurar ordenamiento en tabla
       const tableHeaders = document.querySelectorAll("#sales-table th");
       tableHeaders.forEach(th => {
@@ -751,6 +763,13 @@
 
         const provLabels = topProviders.map(p => p.name);
         const provData = topProviders.map(p => p.val);
+
+        const selectedProv = document.getElementById("filter-provider-input").dataset.value || "";
+        if (selectedProv) {
+          document.getElementById("btn-clear-chart-provider").style.display = "inline-block";
+        } else {
+          document.getElementById("btn-clear-chart-provider").style.display = "none";
+        }
 
         // Render / Actualizar Gráfico de Productos
         if (chartProducts) {
