@@ -191,6 +191,11 @@ def main():
                     if lote.endswith('.0'):
                         lote = lote[:-2]
                         
+                    # Separar productos por variedad si son tomate o cherry
+                    especie_upper = especie.upper()
+                    if (especie_upper in ["TOMATE", "CHERRY", "CHERRY RAC"]) and variedad:
+                        especie = f"{especie} {variedad}"
+                        
                     consolidated_data.append({
                         'fecha': fecha,
                         'guia': guia,
