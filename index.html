@@ -319,6 +319,13 @@
 
       // Funcion que inicializa la visualizacion del dashboard una vez desencriptado
       function initDashboard() {
+        // Inicializar fecha "Hasta" con la fecha de hoy
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        document.getElementById("filter-date-to").value = `${yyyy}-${mm}-${dd}`;
+
         // Actualizar badge de última actualización
         document.getElementById("last-update-badge").textContent = `Actualizado: ${window.lastUpdate || "Recién"}`;
 
@@ -703,12 +710,18 @@
           totalBultos += row.bultos;
         });
 
+        const uniqueProducts = new Set(filteredData.map(row => row.producto));
         const promedio = totalBultos > 0 ? (totalRecaudado / totalBultos) : 0;
 
         // Render KPIs
         document.getElementById("kpi-recaudado").textContent = formatter.format(totalRecaudado);
         document.getElementById("kpi-bultos").textContent = totalBultos.toLocaleString('es-AR');
-        document.getElementById("kpi-promedio").textContent = formatter.format(promedio);
+        
+        if (uniqueProducts.size === 1) {
+          document.getElementById("kpi-promedio").textContent = formatter.format(promedio);
+        } else {
+          document.getElementById("kpi-promedio").textContent = "-";
+        }
         
         // Colores segun recaudacion (si es negativo devolucion, color rojo/amarillo)
         const recCardValue = document.getElementById("kpi-recaudado");
@@ -852,20 +865,22 @@
             chartProducts.data.datasets.pop();
           }
           
-          // Restaurar escalas a eje simple
-          if (chartProducts.options.scales.x1) {
-            chartProducts.options.scales = {
-              x: {
-                grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                ticks: { color: '#9ca3af', font: { family: 'Outfit' } }
-              },
-              y: {
-                grid: { display: false },
-                ticks: { color: '#9ca3af', font: { family: 'Outfit', weight: 'bold' } }
+          // Asegurar escalas correctas con eje simple, sin auto-skip y fuente legible
+          chartProducts.options.scales = {
+            x: {
+              grid: { color: 'rgba(255, 255, 255, 0.05)' },
+              ticks: { color: '#9ca3af', font: { family: 'Outfit' } }
+            },
+            y: {
+              grid: { display: false },
+              ticks: { 
+                autoSkip: false,
+                color: '#9ca3af', 
+                font: { family: 'Outfit', weight: 'bold', size: 9 } 
               }
-            };
-            chartProducts.data.datasets[0].xAxisID = 'x';
-          }
+            }
+          };
+          chartProducts.data.datasets[0].xAxisID = 'x';
           
           chartProducts.options.plugins.tooltip.callbacks.label = tooltipCallback;
           chartProducts.update();
@@ -926,7 +941,11 @@
                 },
                 y: {
                   grid: { display: false },
-                  ticks: { color: '#9ca3af', font: { family: 'Outfit', weight: 'bold' } }
+                  ticks: { 
+                    autoSkip: false,
+                    color: '#9ca3af', 
+                    font: { family: 'Outfit', weight: 'bold', size: 9 } 
+                  }
                 }
               }
             }
