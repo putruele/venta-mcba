@@ -1080,6 +1080,14 @@
                     color: '#9ca3af',
                     font: { family: 'Outfit', size: 11 },
                     boxWidth: 12
+                  },
+                  onClick: (event, legendItem, legend) => {
+                    const label = legendItem.text;
+                    const provInput = document.getElementById("filter-provider-input");
+                    provInput.value = label;
+                    provInput.dataset.value = label;
+                    currentPage = 1;
+                    applyFilters();
                   }
                 },
                 tooltip: {
