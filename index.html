@@ -57,16 +57,19 @@
         <div class="kpi-title">Recaudado Total</div>
         <div class="kpi-value" id="kpi-recaudado">$0,00</div>
         <div class="kpi-sub" id="kpi-sub-recaudado">Suma neta de ventas</div>
+        <div class="kpi-date-range" id="kpi-date-recaudado" style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.4rem; font-weight: 500; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.4rem;">Período: -</div>
       </div>
       <div class="kpi-card bultos">
         <div class="kpi-title">Bultos Totales</div>
         <div class="kpi-value" id="kpi-bultos">0</div>
         <div class="kpi-sub" id="kpi-sub-bultos">Cantidad de bultos/cajas vendidos</div>
+        <div class="kpi-date-range" id="kpi-date-bultos" style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.4rem; font-weight: 500; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.4rem;">Período: -</div>
       </div>
       <div class="kpi-card promedio">
         <div class="kpi-title">Promedio General</div>
         <div class="kpi-value" id="kpi-promedio">$0,00</div>
         <div class="kpi-sub" id="kpi-sub-promedio">Valor promedio ponderado por bulto</div>
+        <div class="kpi-date-range" id="kpi-date-promedio" style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.4rem; font-weight: 500; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.4rem;">Período: -</div>
       </div>
     </div>
 
@@ -795,6 +798,39 @@
         } else {
           recCardValue.style.color = "var(--color-success)";
         }
+
+        // Renderizar el período en las tarjetas
+        const dateFrom = document.getElementById("filter-date-from").value;
+        const dateTo = document.getElementById("filter-date-to").value;
+        
+        function formatDateString(dateStr) {
+          if (!dateStr) return "";
+          const parts = dateStr.split('-');
+          if (parts.length === 3) {
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+          }
+          return dateStr;
+        }
+
+        let periodText = "Período: todo el historial";
+        if (dateFrom && dateTo) {
+          periodText = `Período: ${formatDateString(dateFrom)} al ${formatDateString(dateTo)}`;
+        } else if (dateFrom) {
+          periodText = `Período: desde ${formatDateString(dateFrom)}`;
+        } else if (dateTo) {
+          periodText = `Período: al ${formatDateString(dateTo)}`;
+        } else if (filteredData.length > 0) {
+          const dates = filteredData.map(d => d.fecha).filter(Boolean).sort();
+          if (dates.length > 0) {
+            const minDate = dates[0];
+            const maxDate = dates[dates.length - 1];
+            periodText = `Período: ${formatDateString(minDate)} al ${formatDateString(maxDate)}`;
+          }
+        }
+        
+        document.getElementById("kpi-date-recaudado").textContent = periodText;
+        document.getElementById("kpi-date-bultos").textContent = periodText;
+        document.getElementById("kpi-date-promedio").textContent = periodText;
       }
 
       // Actualizar Gráficos (Chart.js)
