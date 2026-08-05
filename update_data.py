@@ -32,6 +32,35 @@ def encrypt_data(data_str, password):
     combined = iv + ciphertext
     return base64.b64encode(combined).decode('utf-8')
 
+def find_git_executable():
+    # 1. Probar si 'git' esta directo en el PATH
+    import shutil
+    git_path = shutil.which("git")
+    if git_path:
+        return git_path
+        
+    # 2. Buscar en rutas comunes de Windows
+    user_profile = os.environ.get("USERPROFILE", "")
+    local_appdata = os.environ.get("LOCALAPPDATA", "")
+    
+    common_paths = [
+        r"C:\Program Files\Git\cmd\git.exe",
+        r"C:\Program Files\Git\bin\git.exe",
+        r"C:\Program Files (x86)\Git\cmd\git.exe",
+    ]
+    if user_profile:
+        common_paths.append(os.path.join(user_profile, r"AppData\Local\Programs\Git\cmd\git.exe"))
+        common_paths.append(os.path.join(user_profile, r"AppData\Local\Programs\Git\bin\git.exe"))
+    if local_appdata:
+        common_paths.append(os.path.join(local_appdata, r"Programs\Git\cmd\git.exe"))
+        common_paths.append(os.path.join(local_appdata, r"Programs\Git\bin\git.exe"))
+        
+    for path in common_paths:
+        if os.path.exists(path):
+            return path
+            
+    return "git" # Fallback al comando standard
+
 def git_push():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     if not os.path.exists(os.path.join(script_dir, ".git")):
@@ -39,12 +68,13 @@ def git_push():
         print("Sigue los pasos en 'INSTRUCCIONES_GITHUB.md' para poder acceder de forma remota.")
         return
         
-    print("\n[GITHUB] Detectado repositorio Git. Subiendo cambios a GitHub...")
+    git_bin = find_git_executable()
+    print(f"\n[GITHUB] Detectado repositorio Git (Usando: {git_bin}). Subiendo cambios a GitHub...")
     try:
-        subprocess.run(["git", "add", "."], cwd=script_dir, check=True)
+        subprocess.run([git_bin, "add", "."], cwd=script_dir, check=True)
         commit_msg = f"Actualizacion automatica de ventas - {datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"
-        subprocess.run(["git", "commit", "-m", commit_msg], cwd=script_dir, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        result = subprocess.run(["git", "push", "origin", "main", "--force"], cwd=script_dir, capture_output=True, text=True)
+        subprocess.run([git_bin, "commit", "-m", commit_msg], cwd=script_dir, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        result = subprocess.run([git_bin, "push", "origin", "main", "--force"], cwd=script_dir, capture_output=True, text=True)
         if result.returncode == 0:
             print("¡Cambios subidos a GitHub exitosamente!")
         else:
