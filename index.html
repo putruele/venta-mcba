@@ -204,15 +204,18 @@
     </div>
   </div>
 
-  <!-- Carga la base de datos generada -->
-  <script src="dashboard_data.js"></script>
-
   <!-- Script principal del Dashboard -->
   <script>
     // Inicialización del Dashboard
     document.addEventListener("DOMContentLoaded", () => {
-      // 1. Verificar si hay datos encriptados
-      if (!window.encryptedData) {
+      // Cargar dinámicamente el script de datos agregando un timestamp para evitar la caché
+      const script = document.createElement("script");
+      script.src = "dashboard_data.js?v=" + new Date().getTime();
+      document.head.appendChild(script);
+
+      script.onload = () => {
+        // 1. Verificar si hay datos encriptados
+        if (!window.encryptedData) {
         document.getElementById("login-overlay").style.display = "none";
         document.querySelector(".container").style.display = "none";
         document.body.innerHTML = `
@@ -1150,6 +1153,7 @@
         // Ejecutar filtros al cargar inicialmente para dibujar gráficos e inicializar tabla
         applyFilters();
       } // Fin de initDashboard
+      }; // Fin de script.onload
     }); // Fin de DOMContentLoaded
   </script>
 </body>
