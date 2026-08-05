@@ -275,7 +275,7 @@
         const username = usernameInput.value.trim();
         const password = passwordInput.value;
 
-        if (username !== "Comercial") {
+        if (username.toLowerCase() !== "comercial") {
           showLoginError("Usuario o contraseña incorrectos.");
           return;
         }

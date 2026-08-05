@@ -287,7 +287,7 @@ def main():
     # Encrypt the records to a JSON string using password
     json_str = json.dumps(cleaned_records, ensure_ascii=False)
     try:
-        encrypted_b64 = encrypt_data(json_str, "Inf05201.")
+        encrypted_b64 = encrypt_data(json_str, "info5201")
     except Exception as enc_err:
         print(f"Error encriptando los datos: {enc_err}")
         print("Asegurese de tener instalada la libreria 'cryptography' (se instala corriendo actualizar.bat).")
