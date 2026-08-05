@@ -728,3 +728,19 @@ tr:hover td {
   color: var(--text-primary);
 }
 
+/* Botones de presets de fecha */
+.btn-preset-date {
+  transition: all var(--transition-fast);
+}
+
+.btn-preset-date.active {
+  background: var(--color-accent) !important;
+  border-color: var(--color-accent) !important;
+  color: white !important;
+}
+
+.btn-preset-date:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--text-primary) !important;
+}
+
