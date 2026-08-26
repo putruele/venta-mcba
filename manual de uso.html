@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Manual de Usuario - Diario de Ventas MCBA</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f9f9f9;
+    }
+    h1 {
+      color: #1e3a8a;
+      border-bottom: 2px solid #e5e7eb;
+      padding-bottom: 10px;
+      text-align: center;
+    }
+    h2 {
+      color: #2563eb;
+      margin-top: 25px;
+    }
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
+      border: 1px solid #e5e7eb;
+    }
+    .badge {
+      background-color: #dbeafe;
+      color: #1e40af;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.9em;
+      font-weight: bold;
+    }
+    .warning {
+      background-color: #fffbeb;
+      border-left: 4px solid #d97706;
+      padding: 15px;
+      border-radius: 4px;
+      margin-top: 15px;
+    }
+    ul {
+      padding-left: 20px;
+    }
+    li {
+      margin-bottom: 8px;
+    }
+    code {
+      background: #f3f4f6;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: Consolas, monospace;
+      font-size: 0.95em;
+    }
+    .example-box {
+      background-color: #f0fdf4;
+      border-left: 4px solid #16a34a;
+      padding: 12px;
+      margin-top: 10px;
+      border-radius: 4px;
+      font-size: 0.95em;
+    }
+  </style>
+</head>
+<body>
+  <h1>Guía Rápida: Dashboard de Ventas</h1>
+  
+  <div class="card">
+    <h2>🔑 1. Acceso al Sistema</h2>
+    <p>Ingresa a la web y coloca las siguientes credenciales para desencriptar el reporte:</p>
+    <ul>
+      <li><strong>Usuario:</strong> <span class="badge">comercial</span> *(acepta mayúsculas o minúsculas)*</li>
+      <li><strong>Contraseña:</strong> <span class="badge">info5201</span></li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>📊 2. Pestañas de Métricas (Valor / Bultos)</h2>
+    <p>Usa los botones de la esquina superior derecha para alternar la visualización del panel:</p>
+    <ul>
+      <li><strong>Ficha Valor:</strong> Muestra facturación en pesos ($) y precios promedios por bulto.</li>
+      <li><strong>Ficha Bultos:</strong> Muestra cantidades físicas de cajas o bultos vendidos.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>🎯 3. Filtros Rápidos y Buscadores</h2>
+    <ul>
+      <li><strong>Presets de Fechas:</strong> Haz clic en <code>1 Sem</code>, <code>15 d</code>, <code>30 d</code> o <code>60 d</code> para filtrar automáticamente hacia atrás desde hoy.</li>
+      <li><strong>Buscadores Inteligentes:</strong> Al filtrar un <strong>Producto</strong>, el listado de <strong>Proveedores</strong> se reducirá automáticamente para mostrarte solo los que venden ese producto (y viceversa).</li>
+      <li><strong>Buscador Global:</strong> Escribe en el cuadro de búsqueda de la tabla para filtrar por lote, guía, procedencia u origen del archivo.</li>
+      <li><strong>Restablecer:</strong> Limpia todos los filtros activos para volver a la vista general.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>🖱️ 4. Gráficos Cliqueables (Click-to-Filter)</h2>
+    <ul>
+      <li><strong>Filtrar desde el gráfico:</strong> Haz clic sobre cualquier barra de producto (izquierda) o porción de la dona de proveedores (derecha) para filtrar el dashboard por ese elemento de inmediato.</li>
+      <li><strong>Filtro en Leyenda:</strong> También puedes hacer clic directo sobre los nombres de la lista de proveedores a la derecha de la dona para filtrar por ese proveedor.</li>
+      <li><strong>Botón Volver:</strong> Si filtraste por un gráfico, aparecerá un botón <code>← Volver</code> junto a su título para quitar el filtro al instante.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>💡 5. Tarjetas de Resumen (KPIs)</h2>
+    <ul>
+      <li>Muestran el acumulado de recaudado, bultos y promedio del período seleccionado (que se detalla al pie de cada tarjeta).</li>
+      <li><strong>Dato importante:</strong> El <em>Promedio General</em> solo mostrará valor cuando tengas seleccionado <strong>un único producto</strong> en pantalla. De lo contrario, mostrará un guion (<code>-</code>) para no mezclar promedios.</li>
+    </ul>
+  </div>
+
+  <div class="card" style="border-color: #16a34a;">
+    <h2>💡 6. Ejemplos Prácticos: ¿Qué puedes analizar con este Dashboard?</h2>
+    
+    <div class="example-box">
+      <strong>Ejemplo A: Saber quién vendió más de un producto y a qué precio promedio</strong>
+      <br>Haz clic en la barra del gráfico que dice <code>TOMATE REDONDO</code>. Al instante todo el dashboard se filtra. Podrás ver en el gráfico derecho la torta de participación de proveedores para ese tomate, y el gráfico izquierdo te mostrará el precio de venta promedio que logró cada proveedor para esa variedad en específico.
+    </div>
+
+    <div class="example-box">
+      <strong>Ejemplo B: Comparar Volumen vs. Rentabilidad de un proveedor</strong>
+      <br>Filtra por el proveedor <code>A.ROCKY S.</code> en la barra lateral. Haz clic en la ficha <code>Bultos</code> en la esquina superior derecha para ver la cantidad física de cajas entregadas. Luego, haz clic en la ficha <code>Valor</code> para ver cuánto dinero ($) ingresó. Esto te permite saber de inmediato si es un proveedor que aporta volumen o margen de ganancia.
+    </div>
+
+    <div class="example-box">
+      <strong>Ejemplo C: Auditar o buscar un lote reclamado por un cliente</strong>
+      <br>Si un cliente tiene un reclamo de calidad en el lote <code>L2026-A</code>, escribe ese código en el campo de filtro "Nº Lote". La tabla inferior te traerá únicamente las filas de ese lote, detallando la fecha exacta, qué proveedor lo entregó, bajo qué guía entró, el tipo de envase y a qué precio promedio se liquidó en el mercado.
+    </div>
+
+    <div class="example-box">
+      <strong>Ejemplo D: Consultar los precios promedios de una variedad</strong>
+      <br>Si quieres saber a cuánto se está vendiendo el Cherry, escribe y selecciona <code>CHERRY COMUN ROJO</code> en el buscador de productos. La tarjeta de "Promedio General" de arriba se activará y te mostrará el precio promedio exacto por bulto del Cherry en el período seleccionado.
+    </div>
+  </div>
+
+  <div class="card" style="border-color: #f59e0b;">
+    <h2>💾 7. Carga de Nuevos Datos (Para Administradores)</h2>
+    <ol>
+      <li>Guarda los archivos Excel nuevos en la carpeta del proyecto en tu PC.</li>
+      <li>Haz doble clic en <code>actualizar.bat</code>.</li>
+      <li>El script procesará los datos, los encriptará y los subirá automáticamente a internet.</li>
+    </ol>
+    <div class="warning">
+      <strong>⚠️ ¡IMPORTANTE!</strong> No borres los Excel viejos de tu computadora. El actualizador los necesita a todos juntos para armar el histórico completo en cada actualización. Si los borras de tu PC, se perderá el histórico en la web.
+    </div>
+  </div>
+</body>
+</html>
